@@ -1,6 +1,27 @@
 import { useState, useRef } from "react";
-import { Upload, X, FileText } from "lucide-react";
+import { Upload, X, FileText, Sheet, Table } from "lucide-react";
 import { uploadDocument } from "../api/client";
+
+const ALLOWED_EXTENSIONS = /\.(pdf|txt|docx|csv|xlsx|xls)$/i;
+
+const FILE_TYPE_LABELS = {
+  pdf: { label: "PDF", color: "text-red-400" },
+  txt: { label: "TXT", color: "text-gray-400" },
+  docx: { label: "DOCX", color: "text-blue-400" },
+  csv: { label: "CSV", color: "text-green-400" },
+  xlsx: { label: "XLSX", color: "text-emerald-400" },
+  xls: { label: "XLS", color: "text-emerald-400" },
+};
+
+function FileTypeBadge({ filename }) {
+  const ext = filename.split(".").pop().toLowerCase();
+  const info = FILE_TYPE_LABELS[ext] || { label: ext.toUpperCase(), color: "text-gray-400" };
+  return (
+    <span className={`text-xs font-bold ${info.color} bg-gray-800 px-2 py-0.5 rounded`}>
+      {info.label}
+    </span>
+  );
+}
 
 export default function DocumentUpload({ onUploaded, onClose }) {
   const [file, setFile] = useState(null);
@@ -10,10 +31,8 @@ export default function DocumentUpload({ onUploaded, onClose }) {
   const inputRef = useRef();
 
   const handleFile = (f) => {
-    const allowed = ["application/pdf", "text/plain",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
-    if (!allowed.includes(f.type) && !f.name.match(/\.(pdf|txt|docx)$/i)) {
-      setError("Only PDF, TXT, and DOCX files are supported.");
+    if (!ALLOWED_EXTENSIONS.test(f.name)) {
+      setError("Supported formats: PDF, TXT, DOCX, CSV, XLSX, XLS");
       return;
     }
     setFile(f);
@@ -59,14 +78,25 @@ export default function DocumentUpload({ onUploaded, onClose }) {
               className="border-2 border-dashed border-gray-600 hover:border-indigo-500 rounded-lg p-8 text-center cursor-pointer transition-colors"
             >
               <Upload className="mx-auto mb-3 text-gray-400" size={32} />
-              <p className="text-gray-300 text-sm">
-                {file ? file.name : "Drag & drop or click to select"}
-              </p>
-              <p className="text-gray-500 text-xs mt-1">PDF, TXT, DOCX supported</p>
+              {file ? (
+                <div className="flex items-center justify-center gap-2">
+                  <FileTypeBadge filename={file.name} />
+                  <p className="text-gray-300 text-sm truncate max-w-xs">{file.name}</p>
+                </div>
+              ) : (
+                <p className="text-gray-300 text-sm">Drag & drop or click to select</p>
+              )}
+              <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                {["PDF", "TXT", "DOCX", "CSV", "XLSX", "XLS"].map((t) => (
+                  <span key={t} className="text-xs bg-gray-800 text-gray-500 px-2 py-0.5 rounded">
+                    {t}
+                  </span>
+                ))}
+              </div>
               <input
                 ref={inputRef}
                 type="file"
-                accept=".pdf,.txt,.docx"
+                accept=".pdf,.txt,.docx,.csv,.xlsx,.xls"
                 className="hidden"
                 onChange={(e) => e.target.files[0] && handleFile(e.target.files[0])}
               />

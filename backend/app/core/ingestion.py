@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 from typing import List
 
+import pandas as pd
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
@@ -10,18 +11,69 @@ from langchain_core.documents import Document
 from app.config import settings
 from app.models.schemas import DocumentInfo
 
+ROWS_PER_CHUNK = 50
+
+
+def _dataframe_to_docs(df: pd.DataFrame, filename: str, sheet: str = "") -> List[Document]:
+    """Convert a DataFrame into chunked Documents (ROWS_PER_CHUNK rows each)."""
+    df = df.fillna("").astype(str)
+    headers = list(df.columns)
+    docs = []
+    for start in range(0, len(df), ROWS_PER_CHUNK):
+        chunk_df = df.iloc[start : start + ROWS_PER_CHUNK]
+        rows_text = [
+            " | ".join(f"{col}: {val}" for col, val in zip(headers, row))
+            for _, row in chunk_df.iterrows()
+        ]
+        prefix = f"Sheet: {sheet}\n" if sheet else ""
+        content = (
+            f"{prefix}Columns: {', '.join(headers)}\n\n"
+            + "\n".join(rows_text)
+        )
+        docs.append(
+            Document(
+                page_content=content,
+                metadata={
+                    "source": filename,
+                    "sheet": sheet,
+                    "rows": f"{start}–{start + len(chunk_df) - 1}",
+                },
+            )
+        )
+    return docs
+
+
+def _load_csv(file_path: str, filename: str) -> List[Document]:
+    df = pd.read_csv(file_path)
+    return _dataframe_to_docs(df, filename)
+
+
+def _load_excel(file_path: str, filename: str) -> List[Document]:
+    xl = pd.ExcelFile(file_path, engine="openpyxl")
+    docs = []
+    for sheet in xl.sheet_names:
+        df = xl.parse(sheet)
+        docs.extend(_dataframe_to_docs(df, filename, sheet=sheet))
+    return docs
+
 
 def _load_documents(file_path: str, filename: str) -> List[Document]:
     ext = Path(filename).suffix.lower()
     if ext == ".pdf":
         loader = PyPDFLoader(file_path)
+        return loader.load()
     elif ext == ".docx":
         loader = Docx2txtLoader(file_path)
+        return loader.load()
     elif ext == ".txt":
         loader = TextLoader(file_path, encoding="utf-8")
+        return loader.load()
+    elif ext == ".csv":
+        return _load_csv(file_path, filename)
+    elif ext in {".xlsx", ".xls"}:
+        return _load_excel(file_path, filename)
     else:
         raise ValueError(f"Unsupported file type: {ext}")
-    return loader.load()
 
 
 def ingest_document(file_path: str, filename: str, vector_store) -> DocumentInfo:

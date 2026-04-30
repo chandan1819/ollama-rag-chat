@@ -10,7 +10,7 @@ from app.core.rag_pipeline import get_vector_store
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".csv", ".xlsx", ".xls"}
 
 
 @router.post("/upload", response_model=UploadResponse)

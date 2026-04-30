@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { FileText, Trash2, Plus, Brain, ChevronDown } from "lucide-react";
+import { FileText, Trash2, Plus, Brain, ChevronDown, Table } from "lucide-react";
 import DocumentUpload from "./DocumentUpload";
+
+const TABULAR_EXTS = ["csv", "xlsx", "xls"];
 
 const MODELS = ["llama3", "mistral", "llama3.1", "phi3"];
 
@@ -82,7 +84,10 @@ export default function Sidebar({ documents, onDocumentsChange, model, onModelCh
                   key={doc.document_id}
                   className="flex items-start gap-2 group p-2 rounded-lg hover:bg-gray-800 transition-colors"
                 >
-                  <FileText size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                  {TABULAR_EXTS.includes(doc.file_type)
+                    ? <Table size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                    : <FileText size={14} className="text-indigo-400 shrink-0 mt-0.5" />
+                  }
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-300 truncate">{doc.filename}</p>
                     <p className="text-xs text-gray-600">{doc.chunk_count} chunks</p>

@@ -9,11 +9,8 @@ dist/
 build/
 .env
 
-# Uploads
+# Uploads (the uploads/ folder already covers these)
 uploads/
-*.pdf
-*.docx
-*.txt
 
 # Node
 frontend/node_modules/
